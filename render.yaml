@@ -12,7 +12,9 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: JUDGE0_API_KEY
+        sync: false
       - key: WEB_ORIGIN
         value: https://code-ak.vercel.app
-      - key: PISTON_API_URL
-        value: https://emkc.org/api/v2/piston/execute
+      - key: JUDGE0_API_URL
+        value: https://judge0-ce.p.rapidapi.com

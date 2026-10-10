@@ -227,7 +227,9 @@ export default function ProblemPage() {
                     <div className={`flex items-center gap-2 text-sm font-semibold ${verdictColor(result.status)}`}><StatusIcon status={result.status} />{result.status}</div>
                     {typeof result.passed === "number" && <span className="text-[11px] text-gray-400">{result.mode === "sample" ? "Sample cases" : "Hidden tests"} <span className={result.status === "Accepted" ? "text-accent" : "text-gray-200"}>{result.passed} / {result.total}</span></span>}
                     {result.timeMs !== null && <span className="flex items-center gap-1 text-[11px] text-gray-500"><Clock3 size={12} /> Wall {result.timeMs} ms</span>}
-                    <span className="flex items-center gap-1 text-[11px] text-gray-500" title="Piston does not expose per-run memory usage"><MemoryStick size={12} /> Memory not reported</span>
+                    {result.memoryBytes !== null
+                      ? <span className="flex items-center gap-1 text-[11px] text-gray-500"><MemoryStick size={12} /> {(result.memoryBytes / (1024 * 1024)).toFixed(1)} MB memory</span>
+                      : <span className="flex items-center gap-1 text-[11px] text-gray-500" title="The execution provider did not report memory usage"><MemoryStick size={12} /> Memory not reported</span>}
                   </div>
                   {result.message && <pre className="mt-3 whitespace-pre-wrap rounded-lg border border-red-400/10 bg-red-400/[0.035] p-3 font-mono text-[11px] leading-5 text-red-200">{result.message}</pre>}
                   {result.sampleResults?.map((sample, index) => (

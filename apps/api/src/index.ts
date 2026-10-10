@@ -3,7 +3,7 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import { createClient, type User } from "@supabase/supabase-js";
-import { executeWithPiston, normalizeOutput, type JudgeLanguage, type Verdict } from "./judge";
+import { executeWithJudge0, JudgeConfigurationError, normalizeOutput, type JudgeLanguage, type Verdict } from "./judge";
 
 const requiredEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] as const;
 for (const key of requiredEnv) {
@@ -255,13 +255,14 @@ app.post("/api/submissions", requireAuth, executionRateLimit, asyncRoute(async (
 
   let passed = 0;
   let elapsedMs = 0;
+  let memoryBytes: number | null = null;
   let finalStatus: Verdict = "Accepted";
   let failureMessage: string | undefined;
   const sampleResults: { status: Verdict; stdout: string; expectedOutput: string }[] = [];
   for (const testCase of cases as TestCase[]) {
     let execution;
     try {
-      execution = await executeWithPiston(payload.code, payload.language, testCase.input, {
+      execution = await executeWithJudge0(payload.code, payload.language, testCase.input, {
         timeMs: problem.time_limit,
         memoryMb: problem.memory_limit
       });
@@ -275,6 +276,9 @@ app.post("/api/submissions", requireAuth, executionRateLimit, asyncRoute(async (
     }
 
     elapsedMs = Math.max(elapsedMs, execution.elapsedMs);
+    if (execution.memoryBytes !== null) {
+      memoryBytes = memoryBytes === null ? execution.memoryBytes : Math.max(memoryBytes, execution.memoryBytes);
+    }
     const status = verdictFor(execution.status, testCase.expected_output, execution.stdout);
     if (payload.mode === "sample") {
       sampleResults.push({
@@ -299,7 +303,7 @@ app.post("/api/submissions", requireAuth, executionRateLimit, asyncRoute(async (
       code: payload.code,
       status: finalStatus,
       execution_time: elapsedMs,
-      memory_used: null,
+      memory_used: memoryBytes,
       passed_tests: passed,
       total_tests: cases.length
     });
@@ -312,7 +316,7 @@ app.post("/api/submissions", requireAuth, executionRateLimit, asyncRoute(async (
     passed,
     total: cases.length,
     timeMs: elapsedMs,
-    memoryBytes: null,
+    memoryBytes,
     message: failureMessage,
     sampleResults: payload.mode === "sample" ? sampleResults : undefined
   });
@@ -321,7 +325,7 @@ app.post("/api/submissions", requireAuth, executionRateLimit, asyncRoute(async (
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const message = error instanceof Error ? error.message : "Unexpected server error.";
   console.error("[api]", error);
-  res.status(502).json({ error: message });
+  res.status(error instanceof JudgeConfigurationError ? 503 : 502).json({ error: message });
 });
 
 app.listen(port, () => {

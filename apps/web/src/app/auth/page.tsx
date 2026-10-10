@@ -100,7 +100,7 @@ export default function AuthPage() {
             {mode === "signin" ? "New to codeAK?" : "Already have an account?"}{" "}
             <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); }} className="font-medium text-accent hover:text-[#d2ffa0]">{mode === "signin" ? "Create an account" : "Sign in"}</button>
           </p>
-          <p className="mt-9 text-center text-[11px] leading-5 text-gray-600">By continuing, you agree to use this platform responsibly. Your solutions run in isolated Piston sandboxes.</p>
+          <p className="mt-9 text-center text-[11px] leading-5 text-gray-600">By continuing, you agree to use this platform responsibly. Your solutions run in isolated Judge0 sandboxes.</p>
         </div>
       </section>
     </main>
