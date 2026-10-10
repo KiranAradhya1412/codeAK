@@ -2,12 +2,25 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  username text not null unique check (username ~ '^[a-zA-Z0-9_]{3,32}$'),
+  full_name text not null default '',
+  username text not null unique,
   avatar_url text,
   role text not null default 'user' check (role in ('user', 'admin')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists full_name text not null default '';
+update public.profiles set full_name = username where btrim(full_name) = '';
+alter table public.profiles drop constraint if exists profiles_full_name_check;
+alter table public.profiles
+  add constraint profiles_full_name_check check (char_length(btrim(full_name)) between 2 and 100);
+
+alter table public.profiles drop constraint if exists profiles_username_check;
+alter table public.profiles drop constraint if exists profiles_username_format_check;
+alter table public.profiles
+  add constraint profiles_username_format_check
+  check (username ~ '^[a-zA-Z0-9_]{3,32}$' or (lower(username) = 'ak' and role = 'admin'));
 
 create table if not exists public.problems (
   id uuid primary key default gen_random_uuid(),
@@ -171,6 +184,77 @@ create index if not exists submissions_user_created_idx
   on public.submissions (user_id, created_at desc);
 create unique index if not exists profiles_username_lower_uidx
   on public.profiles (lower(username));
+create unique index if not exists profiles_single_admin_uidx
+  on public.profiles (role) where role = 'admin';
+
+create table if not exists public.site_visits (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  visit_date date not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, visit_date)
+);
+
+create or replace function public.get_admin_site_metrics()
+returns jsonb
+language sql
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'totalUsers', (select count(*) from public.profiles),
+    'totalVisits', (select count(*) from public.site_visits),
+    'uniqueVisitors', (select count(distinct user_id) from public.site_visits)
+  );
+$$;
+
+revoke all on function public.get_admin_site_metrics() from public, anon, authenticated;
+grant execute on function public.get_admin_site_metrics() to service_role;
+
+create or replace function public.get_leaderboard()
+returns table (
+  rank bigint,
+  username text,
+  points bigint,
+  solved_challenges bigint
+)
+language sql
+security definer
+set search_path = ''
+as $$
+  with solved as (
+    select submission.user_id, submission.problem_id, problem.difficulty
+    from public.submissions as submission
+    join public.problems as problem on problem.id = submission.problem_id
+    where submission.status = 'Accepted'
+    group by submission.user_id, submission.problem_id, problem.difficulty
+  ),
+  scores as (
+    select
+      profile.id,
+      profile.username,
+      count(solved.problem_id)::bigint as solved_challenges,
+      coalesce(sum(case solved.difficulty
+        when 'Easy' then 10
+        when 'Medium' then 20
+        when 'Hard' then 30
+        else 0
+      end), 0)::bigint as points
+    from public.profiles as profile
+    left join solved on solved.user_id = profile.id
+    group by profile.id, profile.username
+  )
+  select
+    row_number() over (order by scores.points desc, scores.solved_challenges desc, lower(scores.username), scores.id),
+    scores.username,
+    scores.points,
+    scores.solved_challenges
+  from scores
+  order by scores.points desc, scores.solved_challenges desc, lower(scores.username), scores.id
+  limit 100;
+$$;
+
+revoke all on function public.get_leaderboard() from public, anon, authenticated;
+grant execute on function public.get_leaderboard() to service_role;
 
 create or replace function public.create_profile_for_new_user()
 returns trigger
@@ -179,9 +263,19 @@ security definer
 set search_path = ''
 as $$
 declare
+  profile_name text;
   base_username text;
   profile_username text;
 begin
+  profile_name := btrim(coalesce(new.raw_user_meta_data ->> 'full_name', ''));
+  if char_length(profile_name) < 2 or char_length(profile_name) > 100 then
+    raise exception 'Enter a full name between 2 and 100 characters.';
+  end if;
+
+  if lower(regexp_replace(coalesce(new.raw_user_meta_data ->> 'username', ''), '[^a-zA-Z0-9_]', '', 'g')) = 'ak' then
+    raise exception 'Reserved keyword cannot be used as a username.';
+  end if;
+
   base_username := left(regexp_replace(coalesce(new.raw_user_meta_data ->> 'username', ''), '[^a-zA-Z0-9_]', '', 'g'), 24);
   if char_length(base_username) < 3 then
     base_username := 'coder_' || substr(new.id::text, 1, 8);
@@ -191,8 +285,8 @@ begin
     profile_username := left(base_username, 24) || '_' || substr(new.id::text, 1, 6);
   end if;
 
-  insert into public.profiles (id, username, avatar_url)
-  values (new.id, profile_username, new.raw_user_meta_data ->> 'avatar_url')
+  insert into public.profiles (id, full_name, username, avatar_url)
+  values (new.id, profile_name, profile_username, new.raw_user_meta_data ->> 'avatar_url')
   on conflict (id) do nothing;
   return new;
 end;
@@ -207,6 +301,7 @@ alter table public.profiles enable row level security;
 alter table public.problems enable row level security;
 alter table public.test_cases enable row level security;
 alter table public.submissions enable row level security;
+alter table public.site_visits enable row level security;
 
 drop policy if exists "Users can read their own profile" on public.profiles;
 create policy "Users can read their own profile"
@@ -227,6 +322,7 @@ create policy "Users can read their own submissions"
   on public.submissions for select to authenticated using (auth.uid() = user_id);
 
 revoke all on public.profiles, public.problems, public.test_cases, public.submissions from anon, authenticated;
+revoke all on public.site_visits from anon, authenticated;
 grant select on public.problems to anon, authenticated;
 grant select on public.test_cases to anon, authenticated;
 grant select on public.profiles to authenticated;
@@ -234,3 +330,4 @@ grant update (username, avatar_url) on public.profiles to authenticated;
 grant select on public.submissions to authenticated;
 grant usage on schema public to service_role;
 grant all on public.profiles, public.problems, public.test_cases, public.submissions to service_role;
+grant all on public.site_visits to service_role;

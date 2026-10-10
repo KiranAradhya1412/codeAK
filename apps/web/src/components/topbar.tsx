@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Code2, LogOut, UserRound } from "lucide-react";
+import { Code2, LogOut, Trophy, UserRound } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 
 export function Topbar() {
@@ -29,6 +29,11 @@ export function Topbar() {
           <span className="text-[17px] font-semibold tracking-[-0.04em] text-white">codeAK<span className="text-accent">.</span></span>
         </Link>
         <div className="flex items-center gap-3">
+          {email && (
+            <Link href="/leaderboard" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-gray-300 transition hover:text-accent sm:px-3">
+              <Trophy size={15} /> <span>Leaderboard</span>
+            </Link>
+          )}
           <span className="hidden text-xs text-muted sm:block">{email ?? ""}</span>
           {email ? (
             <button onClick={() => void signOut()} className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-gray-300 transition hover:border-white/20 hover:text-white">

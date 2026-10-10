@@ -7,6 +7,8 @@ import { getSupabase } from "@/lib/supabase";
 
 export default function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,10 +21,28 @@ export default function AuthPage() {
     setMessage("");
     setError("");
     try {
+      const normalizedUsername = username.trim();
+      const normalizedFullName = fullName.trim();
+      if (mode === "signup" && (normalizedFullName.length < 2 || normalizedFullName.length > 100)) {
+        throw new Error("Enter your full name (2–100 characters).");
+      }
+      if (mode === "signup" && !/^[a-zA-Z0-9_]{3,32}$/.test(normalizedUsername)) {
+        throw new Error("Choose a codename with 3–32 letters, numbers, or underscores.");
+      }
+      if (mode === "signup" && normalizedUsername.toLowerCase() === "ak") {
+        throw new Error("That keyword is reserved and cannot be used as a username.");
+      }
+      if (mode === "signup" && password.toLowerCase() === normalizedUsername.toLowerCase()) {
+        throw new Error("Your password cannot match your username.");
+      }
       const supabase = getSupabase();
       const result = mode === "signin"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: normalizedFullName, username: normalizedUsername } }
+        });
       if (result.error) throw result.error;
       if (mode === "signup" && !result.data.session) {
         setMessage("Account created. Check your email to confirm your address, then sign in.");
@@ -62,6 +82,17 @@ export default function AuthPage() {
           <p className="mt-2 text-sm text-gray-500">{mode === "signin" ? "Sign in to pick up where you left off." : "It's free. Let's get you coding."}</p>
 
           <form onSubmit={(event) => void submit(event)} className="mt-8 space-y-4">
+            {mode === "signup" && (
+              <>
+                <label className="block text-xs font-medium text-gray-300">Full name
+                  <input type="text" required minLength={2} maxLength={100} autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.09] bg-panel px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-accent/60" placeholder="Your full name" />
+                </label>
+                <label className="block text-xs font-medium text-gray-300">Code name
+                  <input type="text" required minLength={3} maxLength={32} autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.09] bg-panel px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-accent/60" placeholder="3–32 letters, numbers, or underscores" />
+                  <span className="mt-1 block text-[11px] text-gray-500">Your code name appears on the leaderboard.</span>
+                </label>
+              </>
+            )}
             <label className="block text-xs font-medium text-gray-300">Email address
               <input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.09] bg-panel px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-accent/60" placeholder="you@example.com" />
             </label>

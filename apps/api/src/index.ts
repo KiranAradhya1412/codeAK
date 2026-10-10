@@ -90,6 +90,21 @@ function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunctio
   }).catch(next);
 }
 
+function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  void Promise.resolve(supabase.from("profiles").select("role").eq("id", req.user!.id).maybeSingle())
+    .then(({ data, error }) => {
+      if (error) {
+        next(new Error(`Could not verify administrator access: ${error.message}`));
+        return;
+      }
+      if (data?.role !== "admin") {
+        res.status(404).json({ error: "Not found." });
+        return;
+      }
+      next();
+    }).catch(next);
+}
+
 function validatePayload(body: unknown): SubmissionPayload | null {
   if (typeof body !== "object" || body === null) return null;
   const value = body as Record<string, unknown>;
@@ -107,6 +122,65 @@ function verdictFor(status: Verdict, expected: string, actual: string): Verdict 
 }
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+app.post("/api/visits", requireAuth, asyncRoute(async (req, res) => {
+  const { error } = await supabase.from("site_visits").upsert({
+    user_id: req.user!.id,
+    visit_date: new Date().toISOString().slice(0, 10)
+  }, { onConflict: "user_id,visit_date", ignoreDuplicates: true });
+  if (error) throw new Error(`Could not record visit: ${error.message}`);
+  res.status(204).end();
+}));
+
+app.get("/api/admin/dashboard", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
+  const requestedPage = Number(req.query.page ?? 1);
+  if (!Number.isSafeInteger(requestedPage) || requestedPage < 1 || requestedPage > 10_000) {
+    res.status(400).json({ error: "Invalid page number." });
+    return;
+  }
+  const perPage = 50;
+  const [{ data: authUsers, error: usersError }, { data: metrics, error: metricsError }] = await Promise.all([
+    supabase.auth.admin.listUsers({ page: requestedPage, perPage }),
+    supabase.rpc("get_admin_site_metrics")
+  ]);
+  if (usersError) throw new Error(`Could not load user accounts: ${usersError.message}`);
+  if (metricsError) throw new Error(`Could not load site metrics: ${metricsError.message}`);
+  if (!metrics || typeof metrics !== "object") throw new Error("Site metrics returned an invalid response.");
+
+  const userIds = authUsers.users.map((user) => user.id);
+  const { data: profiles, error: profilesError } = userIds.length
+    ? await supabase.from("profiles").select("id,full_name,username,role,created_at").in("id", userIds)
+    : { data: [], error: null };
+  if (profilesError) throw new Error(`Could not load user profiles: ${profilesError.message}`);
+
+  const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+  const accounts = authUsers.users.map((user) => {
+    const profile = profilesById.get(user.id);
+    return {
+      id: user.id,
+      email: user.email ?? null,
+      fullName: profile?.full_name ?? null,
+      username: profile?.username ?? null,
+      role: profile?.role ?? "user",
+      createdAt: user.created_at,
+      lastSignInAt: user.last_sign_in_at ?? null
+    };
+  });
+
+  res.json({
+    metrics,
+    accounts,
+    page: requestedPage,
+    perPage,
+    hasMore: requestedPage * perPage < Number(metrics.totalUsers)
+  });
+}));
+
+app.get("/api/leaderboard", requireAuth, asyncRoute(async (_req, res) => {
+  const { data, error } = await supabase.rpc("get_leaderboard");
+  if (error) throw new Error(`Could not load leaderboard: ${error.message}`);
+  res.json(data ?? []);
+}));
 
 app.get("/api/problems", requireAuth, asyncRoute(async (_req, res) => {
   const { data, error } = await supabase.from("problems")

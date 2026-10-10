@@ -19,6 +19,8 @@ Run `supabase/schema.sql` first and `supabase/seed.sql` second in the Supabase S
 - `GET /api/problems/:slug` returns one problem and its sample cases only, for authenticated users.
 - `GET /api/submissions/status` returns solved problem IDs for the authenticated user.
 - `POST /api/submissions` accepts `{ problemId, code, language, mode }`, where `mode` is `sample` or `submit`. JWTs are verified with Supabase Auth. Sample runs only load sample rows; submissions only load hidden rows.
+- `GET /api/leaderboard` returns the top 100 codenames with unique solved-challenge counts and points. Accepted challenges award 10 points for Easy, 20 for Medium, and 30 for Hard; each problem counts once per user.
+- `GET /api/admin/dashboard` returns paginated account email/profile metadata and aggregate visit counts only to the single profile assigned the `admin` role. `POST /api/visits` records at most one visit per authenticated account per UTC day; no IP addresses are stored.
 - Submitted code is passed to `https://emkc.org/api/v2/piston/execute`; it is never executed in the Express process. Test output is whitespace-normalized for comparison. Only aggregate verdict/counts are returned for hidden tests.
 - Each account is limited to 10 executions per minute. Source length, request body size, execution time, memory, and test count are bounded.
 
@@ -29,6 +31,12 @@ Piston does not return reliable per-execution memory usage. The API persists `me
 `apps/web/src/app/page.tsx` provides the searchable, difficulty-filtered problem list and per-user solved badges. `apps/web/src/app/problems/[slug]/page.tsx` provides the resizable problem/editor split, four-language Monaco editor, sample runner, hidden-test submit action, and output console. Email/password sign-in and registration are in `apps/web/src/app/auth/page.tsx`. An app-wide gate hides challenge pages and redirects signed-out visitors to sign-in, returning them to their requested page after authentication. The site uses a light theme.
 
 The current seed set contains original practice challenges. Do not copy proprietary challenge statements or wholesale catalogs from third-party platforms; expand the collection with original content or datasets whose licenses explicitly allow redistribution.
+
+## Accounts and leaderboard
+
+Sign-up asks for a full name and a unique public codename. The full name is private account profile data and is not included in the leaderboard; leaderboard entries display the codename, unique solved count, and points. Accepted solutions score once per challenge: Easy is 10 points, Medium is 20, and Hard is 30.
+
+Apply `supabase/schema.sql`, then create/confirm the administrator's account through Supabase Auth. Replace the example email in `supabase/bootstrap-admin.sql` with that existing account's email and run the statement in the Supabase SQL Editor. It assigns the reserved `AK` profile name and administrator role; the database permits only one administrator. Do not put administrator passwords in SQL, source files, or browser code. Supabase Auth stores password hashes and does not expose recoverable passwords; use Supabase's password reset flow if credentials need changing. The admin screen is not linked from the public navigation, and its API verifies the database role for every request.
 
 ## Phase 4: Seed data and checks
 

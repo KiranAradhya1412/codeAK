@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
+import { recordSiteVisit } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 
 type AuthStatus = "checking" | "authenticated" | "configuration-error";
@@ -10,6 +12,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [status, setStatus] = useState<AuthStatus>("checking");
+  const recordedVisit = useRef("");
 
   useEffect(() => {
     if (pathname === "/auth") return;
@@ -17,10 +20,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
     let active = true;
     try {
       const supabase = getSupabase();
+      const recordVisit = (session: Session | null) => {
+        if (!session) return;
+        const today = new Date().toISOString().slice(0, 10);
+        const visitKey = `${session.user.id}:${today}`;
+        if (recordedVisit.current === visitKey) return;
+        recordedVisit.current = visitKey;
+        void recordSiteVisit(session.access_token).catch((error: unknown) => {
+          console.error("Could not record site visit analytics.", error);
+        });
+      };
+
       const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
         if (!active) return;
         if (session) {
           setStatus("authenticated");
+          recordVisit(session);
           return;
         }
         setStatus("checking");
@@ -33,6 +48,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         if (error) throw error;
         if (data.session) {
           setStatus("authenticated");
+          recordVisit(data.session);
           return;
         }
         const next = `${window.location.pathname}${window.location.search}`;
