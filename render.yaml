@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: codeak-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci && npm run build --workspace @codeak/api
+    startCommand: npm run start --workspace @codeak/api
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: WEB_ORIGIN
+        value: https://code-ak.vercel.app
+      - key: PISTON_API_URL
+        value: https://emkc.org/api/v2/piston/execute
