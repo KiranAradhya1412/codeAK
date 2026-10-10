@@ -110,7 +110,7 @@ export default function ProblemPage() {
   if (!problem) return <main className="min-h-screen bg-ink"><Topbar /><div className="mx-auto mt-20 h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-accent" /></main>;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#10141b]">
+    <main className="flex min-h-screen flex-col bg-ink">
       <Topbar />
       <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-2.5 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
@@ -184,7 +184,7 @@ export default function ProblemPage() {
             <Editor
               height="100%"
               language={editorLanguage[language]}
-              theme="vs-dark"
+              theme="vs"
               value={source}
               onChange={changeSource}
               options={{
@@ -203,7 +203,7 @@ export default function ProblemPage() {
               }}
             />
           </div>
-          <div className="shrink-0 border-t border-white/[0.08] bg-[#141922]">
+          <div className="shrink-0 border-t border-white/[0.08] bg-panel">
             <div className="flex h-10 items-center justify-between border-b border-white/[0.06] px-4">
               <div className="flex h-full items-center gap-4">
                 <button onClick={() => setConsoleTab("result")} className={`flex h-full items-center gap-2 border-b text-[11px] font-medium ${consoleTab === "result" ? "border-accent text-gray-200" : "border-transparent text-gray-500 hover:text-gray-300"}`}><Terminal size={13} /> Result</button>

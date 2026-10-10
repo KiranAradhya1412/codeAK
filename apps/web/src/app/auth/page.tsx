@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, Code2 } from "lucide-react";
+import { Code2 } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 
 export default function AuthPage() {
@@ -27,7 +27,9 @@ export default function AuthPage() {
       if (mode === "signup" && !result.data.session) {
         setMessage("Account created. Check your email to confirm your address, then sign in.");
       } else {
-        window.location.assign("/");
+        const requestedPath = new URLSearchParams(window.location.search).get("next");
+        const next = requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/";
+        window.location.assign(next);
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Authentication failed.");
@@ -52,7 +54,7 @@ export default function AuthPage() {
         <p className="relative text-xs text-gray-600">A good problem is an invitation to think differently.</p>
       </section>
       <section className="flex min-h-screen flex-col px-6 py-8 sm:px-10 lg:justify-center lg:px-16">
-        <Link href="/" className="mb-12 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white lg:absolute lg:left-8 lg:top-8"><ArrowLeft size={15} /> Back to challenges</Link>
+        <Link href="/auth" className="mb-12 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white lg:absolute lg:left-8 lg:top-8">codeAK sign in</Link>
         <div className="mx-auto w-full max-w-[380px]">
           <div className="mb-8 lg:hidden"><div className="mb-6 grid size-9 place-items-center rounded-xl bg-accent text-ink"><Code2 size={20} /></div><p className="text-2xl font-semibold tracking-tight text-white">Welcome to codeAK</p></div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-accent">{mode === "signin" ? "Your practice, your pace" : "Start your journey"}</p>

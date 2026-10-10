@@ -22,7 +22,7 @@ export function Topbar() {
   }
 
   return (
-    <header className="border-b border-white/[0.07] bg-[#11151d]">
+    <header className="border-b border-white/[0.07] bg-ink">
       <div className="mx-auto flex h-[68px] max-w-[1440px] items-center justify-between px-6 lg:px-10">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="grid size-8 place-items-center rounded-lg bg-accent text-ink"><Code2 size={19} strokeWidth={2.5} /></span>

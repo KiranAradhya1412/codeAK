@@ -108,7 +108,7 @@ function verdictFor(status: Verdict, expected: string, actual: string): Verdict 
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-app.get("/api/problems", asyncRoute(async (_req, res) => {
+app.get("/api/problems", requireAuth, asyncRoute(async (_req, res) => {
   const { data, error } = await supabase.from("problems")
     .select("id,slug,title,difficulty,category,description,input_format,output_format,starter_code,time_limit,memory_limit")
     .order("created_at", { ascending: true });
@@ -116,7 +116,7 @@ app.get("/api/problems", asyncRoute(async (_req, res) => {
   res.json(data as ProblemRow[]);
 }));
 
-app.get("/api/problems/:slug", asyncRoute(async (req, res) => {
+app.get("/api/problems/:slug", requireAuth, asyncRoute(async (req, res) => {
   const { data, error } = await supabase.from("problems")
     .select("id,slug,title,difficulty,category,description,input_format,output_format,starter_code,time_limit,memory_limit")
     .eq("slug", req.params.slug)

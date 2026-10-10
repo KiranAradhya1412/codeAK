@@ -16,13 +16,16 @@ async function readError(response: Response, fallback: string): Promise<string> 
 }
 
 export async function listProblems(): Promise<Problem[]> {
-  const response = await fetch(`${apiUrl}/api/problems`, { cache: "no-store" });
+  const response = await fetch(`${apiUrl}/api/problems`, { headers: await authHeaders(), cache: "no-store" });
   if (!response.ok) throw new Error(await readError(response, "Could not load problems."));
   return response.json() as Promise<Problem[]>;
 }
 
 export async function getProblem(slug: string): Promise<Problem> {
-  const response = await fetch(`${apiUrl}/api/problems/${encodeURIComponent(slug)}`, { cache: "no-store" });
+  const response = await fetch(`${apiUrl}/api/problems/${encodeURIComponent(slug)}`, {
+    headers: await authHeaders(),
+    cache: "no-store"
+  });
   if (!response.ok) throw new Error(await readError(response, response.status === 404 ? "Problem not found." : "Could not load problem."));
   return response.json() as Promise<Problem>;
 }

@@ -15,8 +15,8 @@ Run `supabase/schema.sql` first and `supabase/seed.sql` second in the Supabase S
 
 `apps/api/src/index.ts` contains the authenticated Express routes; `apps/api/src/judge.ts` owns the Piston request, output normalization support, resource limits, and execution status mapping.
 
-- `GET /api/problems` lists public problem fields.
-- `GET /api/problems/:slug` returns one problem and its sample cases only.
+- `GET /api/problems` lists problem fields for authenticated users.
+- `GET /api/problems/:slug` returns one problem and its sample cases only, for authenticated users.
 - `GET /api/submissions/status` returns solved problem IDs for the authenticated user.
 - `POST /api/submissions` accepts `{ problemId, code, language, mode }`, where `mode` is `sample` or `submit`. JWTs are verified with Supabase Auth. Sample runs only load sample rows; submissions only load hidden rows.
 - Submitted code is passed to `https://emkc.org/api/v2/piston/execute`; it is never executed in the Express process. Test output is whitespace-normalized for comparison. Only aggregate verdict/counts are returned for hidden tests.
@@ -26,7 +26,9 @@ Piston does not return reliable per-execution memory usage. The API persists `me
 
 ## Phase 3: Next.js workspace
 
-`apps/web/src/app/page.tsx` provides the searchable, difficulty-filtered problem list and per-user solved badges. `apps/web/src/app/problems/[slug]/page.tsx` provides the resizable problem/editor split, four-language Monaco editor, sample runner, hidden-test submit action, and output console. Email/password sign-in and registration are in `apps/web/src/app/auth/page.tsx`.
+`apps/web/src/app/page.tsx` provides the searchable, difficulty-filtered problem list and per-user solved badges. `apps/web/src/app/problems/[slug]/page.tsx` provides the resizable problem/editor split, four-language Monaco editor, sample runner, hidden-test submit action, and output console. Email/password sign-in and registration are in `apps/web/src/app/auth/page.tsx`. An app-wide gate hides challenge pages and redirects signed-out visitors to sign-in, returning them to their requested page after authentication. The site uses a light theme.
+
+The current seed set contains original practice challenges. Do not copy proprietary challenge statements or wholesale catalogs from third-party platforms; expand the collection with original content or datasets whose licenses explicitly allow redistribution.
 
 ## Phase 4: Seed data and checks
 
@@ -53,5 +55,8 @@ The default Piston endpoint is included for protocol compatibility but is not av
 ## Deployment
 
 - **Supabase:** execute the schema and seed SQL, configure Auth email settings, and use the project's URL and anon key in the frontend. Keep the service-role key server-side.
-- **Railway (API):** build with `npm run build --workspace @codeak/api`, start with `npm run start --workspace @codeak/api`, and set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PISTON_API_URL`, `WEB_ORIGIN`, and `PORT`.
+- **Render (API):** the root `render.yaml` is a Blueprint for the Express API. Create a Blueprint from this GitHub repository and provide `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as secret values when prompted. Render builds from the repository root, starts only the API workspace, and checks `GET /health`. Set `WEB_ORIGIN` to the deployed frontend origin if it changes.
+- **Render free-tier behavior:** free web services spin down after 15 minutes without inbound traffic and can take about a minute to start again. The health endpoint is for service health checks; no self-pinging keep-alive job is configured. To keep the API continuously available, change the service to a paid compute plan in Render.
 - **Vercel (web):** use `apps/web` as the project root and set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_API_URL` to the deployed API origin.
+
+The public Piston endpoint currently requires whitelist approval. Configure an approved or self-hosted Piston-compatible endpoint in Render's `PISTON_API_URL` variable before expecting code execution to work.

@@ -8,9 +8,9 @@ import { getSolvedProblemIds, listProblems } from "@/lib/api";
 import type { Difficulty, Problem } from "@/lib/types";
 
 const difficultyStyle: Record<Difficulty, string> = {
-  Easy: "text-[#a9e96e]",
-  Medium: "text-[#f3bf69]",
-  Hard: "text-[#f07f84]"
+  Easy: "text-[#47752b]",
+  Medium: "text-[#a15c00]",
+  Hard: "text-[#b42318]"
 };
 
 export default function HomePage() {
