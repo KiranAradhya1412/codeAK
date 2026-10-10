@@ -56,7 +56,7 @@ Requirements: Node.js 20.9+, npm, and a Supabase project.
 2. Copy `apps/web/.env.example` to `apps/web/.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 3. Copy `apps/api/.env.example` to `apps/api/.env`. Set `SUPABASE_URL`, the **service-role** `SUPABASE_SERVICE_ROLE_KEY`, and optionally `PISTON_API_URL`. Never put the service-role key in a `NEXT_PUBLIC_*` variable.
 4. From the repository root, run `npm install` and `npm run dev`. The web app runs at `http://localhost:3000`; the API health check is `http://localhost:4000/health`.
-5. Create an account, verify the email if confirmation is enabled, then open a problem and run its sample cases or submit against hidden tests.
+5. Create an account and open a problem to run its sample cases or submit against hidden tests. Email confirmation is disabled in the Supabase Auth settings.
 
 The default Piston endpoint is included for protocol compatibility but is not available to unapproved public callers. For local or production code execution, obtain whitelist approval or configure a self-hosted Piston-compatible API. For a public production launch, use a managed or self-hosted deployment with suitable capacity, quotas, and monitoring.
 

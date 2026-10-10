@@ -12,13 +12,11 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    setMessage("");
     setError("");
     try {
       const normalizedUsername = username.trim();
@@ -44,13 +42,9 @@ export default function AuthPage() {
           options: { data: { full_name: normalizedFullName, username: normalizedUsername } }
         });
       if (result.error) throw result.error;
-      if (mode === "signup" && !result.data.session) {
-        setMessage("Account created. Check your email to confirm your address, then sign in.");
-      } else {
-        const requestedPath = new URLSearchParams(window.location.search).get("next");
-        const next = requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/";
-        window.location.assign(next);
-      }
+      const requestedPath = new URLSearchParams(window.location.search).get("next");
+      const next = requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/";
+      window.location.assign(next);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Authentication failed.");
     } finally {
@@ -100,12 +94,11 @@ export default function AuthPage() {
               <input type="password" required minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.09] bg-panel px-4 py-3 text-sm text-white outline-none placeholder:text-gray-600 focus:border-accent/60" placeholder="At least 6 characters" />
             </label>
             {error && <p role="alert" className="rounded-lg border border-red-400/20 bg-red-400/[0.06] px-3 py-2.5 text-xs text-red-300">{error}</p>}
-            {message && <p role="status" className="rounded-lg border border-accent/20 bg-accent/[0.06] px-3 py-2.5 text-xs text-accent">{message}</p>}
             <button disabled={busy} className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-ink transition hover:bg-[#cffb9d] disabled:cursor-not-allowed disabled:opacity-60">{busy ? "Please wait..." : mode === "signin" ? "Sign in" : "Create account"}</button>
           </form>
           <p className="mt-6 text-center text-sm text-gray-500">
             {mode === "signin" ? "New to codeAK?" : "Already have an account?"}{" "}
-            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setMessage(""); }} className="font-medium text-accent hover:text-[#d2ffa0]">{mode === "signin" ? "Create an account" : "Sign in"}</button>
+            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); }} className="font-medium text-accent hover:text-[#d2ffa0]">{mode === "signin" ? "Create an account" : "Sign in"}</button>
           </p>
           <p className="mt-9 text-center text-[11px] leading-5 text-gray-600">By continuing, you agree to use this platform responsibly. Your solutions run in isolated Piston sandboxes.</p>
         </div>
