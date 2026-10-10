@@ -1,0 +1,20 @@
+{
+  "name": "codeak",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace @codeak/api\" \"npm run dev --workspace @codeak/web\"",
+    "build": "npm run build --workspace @codeak/api && npm run build --workspace @codeak/web",
+    "start": "npm run start --workspace @codeak/api"
+  },
+  "overrides": {
+    "dompurify": "^3.4.16"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
